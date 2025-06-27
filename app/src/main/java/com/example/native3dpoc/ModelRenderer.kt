@@ -6,6 +6,11 @@ import android.view.SurfaceView
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import com.google.android.filament.Camera
+import com.google.android.filament.ColorGrading
+import com.google.android.filament.EntityManager
+import com.google.android.filament.IndirectLight
+import com.google.android.filament.LightManager
 import com.google.android.filament.View
 import com.google.android.filament.android.UiHelper
 import com.google.android.filament.utils.ModelViewer
@@ -20,6 +25,14 @@ class ModelRenderer {
     private lateinit var uiHelper: UiHelper
     private lateinit var modelViewer: ModelViewer
     private lateinit var assets: AssetManager
+
+    private var currentFov = 45.0 // degrees
+    private val minFov = 1.0
+    private val maxFov = 90.0
+
+    val lights = listOf(
+        Triple(0.0f, -1.0f, -0.5f)
+    )
 
     private val frameScheduler = FrameCallback()
 
@@ -38,6 +51,26 @@ class ModelRenderer {
         }
     }
 
+    fun zoomByFov(zoomIn: Boolean) {
+        currentFov = if (zoomIn) {
+            (currentFov - 1.0).coerceAtLeast(minFov)
+        } else {
+            (currentFov + 1.0).coerceAtMost(maxFov)
+        }
+        updateProjectionMatrix()
+    }
+
+    private fun updateProjectionMatrix() {
+        val aspect = surfaceView.width.toDouble() / surfaceView.height.toDouble()
+        modelViewer.camera.setProjection(
+            currentFov,
+            aspect,
+            0.1,
+            1000.0,
+            Camera.Fov.VERTICAL
+        )
+    }
+
     fun onSurfaceAvailable(surfaceView: SurfaceView, lifecycle: Lifecycle) {
         this.surfaceView = surfaceView
         this.lifecycle = lifecycle
@@ -49,11 +82,15 @@ class ModelRenderer {
             isOpaque = false
         }
         modelViewer = ModelViewer(surfaceView = surfaceView, uiHelper = uiHelper)
+
         // This is needed so we can move the camera in the rendering
         surfaceView.setOnTouchListener { _, event ->
             modelViewer.onTouchEvent(event)
             true
         }
+
+        addSimpleBrightLight()
+
         // This is the other code needed to make the background transparent
         modelViewer.scene.skybox = null
         modelViewer.view.blendMode = View.BlendMode.TRANSLUCENT
@@ -69,6 +106,20 @@ class ModelRenderer {
         }
 
         createRenderables()
+    }
+
+    private fun addSimpleBrightLight() {
+        lights.forEach { (x, y, z) ->
+            val light = EntityManager.get().create()
+            LightManager.Builder(LightManager.Type.DIRECTIONAL)
+                .color(1.0f, 1.0f, 1.0f)
+                .intensity(500000.0f)
+                .direction(x, y, z)
+                .castShadows(false) // Critical: no shadow casting
+                .build(modelViewer.engine, light)
+
+            modelViewer.scene.addEntity(light)
+        }
     }
 
     private fun createRenderables() {

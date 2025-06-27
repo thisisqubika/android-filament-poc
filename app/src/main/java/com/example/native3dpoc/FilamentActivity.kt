@@ -6,7 +6,15 @@ import android.view.SurfaceView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -21,6 +29,8 @@ class FilamentActivity : ComponentActivity() {
         }
     }
 
+    private val modelRenderer = ModelRenderer()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -31,12 +41,41 @@ class FilamentActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AndroidView(factory = { context ->
-                        val renderer = ModelRenderer()
-                        SurfaceView(context).apply {
-                            renderer.onSurfaceAvailable(this, lifecycle)
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        AndroidView(
+                            modifier = Modifier.weight(1f),
+                            factory = { context ->
+                                SurfaceView(context).apply {
+                                    modelRenderer.onSurfaceAvailable(this, lifecycle)
+                                }
+                            }
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    modelRenderer.zoomByFov(true)
+                                },
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Zoom In")
+                            }
+                            IconButton(
+                                onClick = {
+                                    modelRenderer.zoomByFov(false)
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Zoom Out"
+                                )
+                            }
                         }
-                    })
+                    }
+
                 }
             }
         }
